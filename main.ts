@@ -429,13 +429,10 @@ namespace msmdadabit {
         return lastGrab
     }
 
-    // ---------------------------------------------------------
-    // ✅ ACTION PEDAGOGIQUE (pas une condition)
-    // ---------------------------------------------------------
     /**
      * ACTION : chercher un cube de couleur ID, s'en approcher puis l'attraper.
-     * - Le robot ne fait rien si: pas détecté / pas stable / pas centré / déjà en livraison.
-     * - Quand il attrape: bip + bras + passe en phase 1.
+     * - Ne fait rien si : pas détecté / pas stable / pas centré / déjà en livraison.
+     * - Quand il attrape : bip + bras + passe en phase 1.
      */
     //% blockId=msm_approach_grab_color
     //% block="approcher & attraper couleur ID %id"
@@ -481,9 +478,6 @@ namespace msmdadabit {
         lastGrab = true
     }
 
-    // =========================================================
-    // MACROS AI HANDLER (utilisent le bloc ACTION)
-    // =========================================================
     //% blockId=msm_macro_reconnaissance
     //% block="macro AI Handler : reconnaissance (suivre ligne + attraper couleur ID %id)"
     //% id.min=1 id.max=7 id.defl=1
@@ -492,7 +486,7 @@ namespace msmdadabit {
         updateCamera()
         updateLineSensors()
         lineFollowGeneral()
-        approachAndGrabIfColor(id) // ✅ action
+        approachAndGrabIfColor(id)
     }
 
     //% blockId=msm_macro_livraison
@@ -512,13 +506,11 @@ namespace msmdadabit {
             lineFollowGeneral()
         }
     }
+
     // =========================================================
-    // BLOCS UTILS (AJOUTS - ne touchent pas à l'existant)
+    // BLOCS UTILS (AJOUTS) - SANS DOUBLONS
     // =========================================================
 
-    /**
-     * Lire un capteur de ligne individuel (valeur mémorisée après updateLineSensors()).
-     */
     //% blockId=msm_is_on_black
     //% block="capteur %sensor sur noir ?"
     //% sensor.defl=dadabit.LineFollowerSensors.S2
@@ -530,9 +522,6 @@ namespace msmdadabit {
         return S4
     }
 
-    /**
-     * Nombre de capteurs sur noir (0..4) (après updateLineSensors()).
-     */
     //% blockId=msm_black_count
     //% block="nombre de capteurs sur noir"
     //% group="Capteurs"
@@ -545,9 +534,6 @@ namespace msmdadabit {
         return c
     }
 
-    /**
-     * Vrai si au moins 3 capteurs voient le noir (barre / checkpoint).
-     */
     //% blockId=msm_on_bar_3plus
     //% block="barre détectée ? (au moins 3 capteurs sur noir)"
     //% group="Capteurs"
@@ -555,9 +541,6 @@ namespace msmdadabit {
         return blackCount() >= 3
     }
 
-    /**
-     * Vrai si tous les capteurs voient blanc (perte de ligne).
-     */
     //% blockId=msm_all_white
     //% block="ligne perdue ? (tous blancs)"
     //% group="Capteurs"
@@ -565,13 +548,6 @@ namespace msmdadabit {
         return !S1 && !S2 && !S3 && !S4
     }
 
-    // =========================================================
-    // WONDERCAM - MODES UTILS
-    // =========================================================
-
-    /**
-     * Mettre la WonderCam en mode AprilTag.
-     */
     //% blockId=msm_cam_mode_apriltag
     //% block="caméra mode AprilTag"
     //% group="Vision (WonderCam)"
@@ -580,9 +556,6 @@ namespace msmdadabit {
         basic.pause(120)
     }
 
-    /**
-     * Mettre la WonderCam en mode reconnaissance de nombres.
-     */
     //% blockId=msm_cam_mode_number
     //% block="caméra mode Nombre"
     //% group="Vision (WonderCam)"
@@ -591,9 +564,6 @@ namespace msmdadabit {
         basic.pause(120)
     }
 
-    /**
-     * Mettre la WonderCam en mode détection de couleur (ColorDetect).
-     */
     //% blockId=msm_cam_mode_color
     //% block="caméra mode Couleur"
     //% group="Vision (WonderCam)"
@@ -602,17 +572,13 @@ namespace msmdadabit {
         basic.pause(120)
     }
 
-    /**
-     * Lire AprilTag A/B avec délai max (ms). Retourne :
-     * - tagA si détecté, tagB si détecté, sinon -1.
-     */
     //% blockId=msm_read_tag_ab
     //% block="lire AprilTag A %tagA ou B %tagB (timeout %timeoutMs ms)"
     //% tagA.defl=1 tagB.defl=2 timeoutMs.defl=6000
     //% group="Vision (WonderCam)"
     export function readAprilTagAB(tagA: number = 1, tagB: number = 2, timeoutMs: number = 6000): number {
-        let t = 0
         camModeAprilTag()
+        let t = 0
         while (t < timeoutMs) {
             updateCamera()
             if (wondercam.isDetecteAprilTagId(tagA)) return tagA
@@ -623,10 +589,6 @@ namespace msmdadabit {
         return -1
     }
 
-    /**
-     * Lire un nombre 1/2 de manière stable (6 fois) avec délai max (ms).
-     * Retourne 1 ou 2 (par défaut 1 si rien trouvé).
-     */
     //% blockId=msm_read_number_stable
     //% block="lire nombre 1/2 stable (timeout %timeoutMs ms)"
     //% timeoutMs.defl=2500
@@ -653,97 +615,6 @@ namespace msmdadabit {
         return 1
     }
 
-    // =========================================================
-    // SERVO DÉPÔT (SMART TRANSPORT)
-    // =========================================================
-
-    /**
-     * Déposer un cube avec un servo 270° (ex: port 6).
-     * - Va à l'angle "drop", attend, puis revient à "rest".
-     */
-    //% blockId=msm_drop_servo270
-    //% block="déposer cube servo270 port %port angle dépôt %dropAng angle repos %restAng temps dépôt %dropMs temps repos %restMs pause %holdMs"
-    //% port.defl=6 dropAng.defl=-100 restAng.defl=-20 dropMs.defl=200 restMs.defl=500 holdMs.defl=2000
-    //% group="Mouvements"
-    export function dropByServo270(port: number = 6, dropAng: number = -100, restAng: number = -20, dropMs: number = 200, restMs: number = 500, holdMs: number = 2000): void {
-        music.playTone(523, music.beat(BeatFraction.Quarter))
-        basic.pause(150)
-        dadabit.setLego270Servo(port, dropAng, dropMs)
-        basic.pause(holdMs)
-        dadabit.setLego270Servo(port, restAng, restMs)
-        basic.pause(300)
-    }
-    // =========================================================
-    // UTILS CAPTEURS (barres)
-    // =========================================================
-
-    //% blockId=msm_on_bar_3plus
-    //% block="barre détectée ? (au moins 3 capteurs sur noir)"
-    //% group="Capteurs"
-    export function onBar3Plus(): boolean {
-        let c = 0
-        if (S1) c++
-        if (S2) c++
-        if (S3) c++
-        if (S4) c++
-        return c >= 3
-    }
-
-    // =========================================================
-    // UTILS VISION (AprilTag A/B, Number stable)
-    // =========================================================
-
-    //% blockId=msm_read_tag_ab
-    //% block="lire AprilTag A %tagA ou B %tagB (timeout %timeoutMs ms)"
-    //% tagA.defl=1 tagB.defl=2 timeoutMs.defl=6000
-    //% group="Vision (WonderCam)"
-    export function readAprilTagAB(tagA: number = 1, tagB: number = 2, timeoutMs: number = 6000): number {
-        let t = 0
-        wondercam.ChangeFunc(wondercam.Functions.AprilTag)
-        basic.pause(120)
-
-        while (t < timeoutMs) {
-            updateCamera()
-            if (wondercam.isDetecteAprilTagId(tagA)) return tagA
-            if (wondercam.isDetecteAprilTagId(tagB)) return tagB
-            basic.pause(120)
-            t += 120
-        }
-        return -1
-    }
-
-    //% blockId=msm_read_number_stable
-    //% block="lire nombre 1/2 stable (timeout %timeoutMs ms)"
-    //% timeoutMs.defl=2500
-    //% group="Vision (WonderCam)"
-    export function readNumberStable(timeoutMs: number = 2500): number {
-        wondercam.ChangeFunc(wondercam.Functions.NumberRecognition)
-        basic.pause(120)
-
-        let t = 0
-        let last = 0
-        let hits = 0
-
-        while (t < timeoutMs) {
-            updateCamera()
-            if (wondercam.MaxConfidenceOfNumber() >= 0.4) {
-                const n = wondercam.NumberWithMaxConfidence()
-                if (n == 1 || n == 2) {
-                    if (n == last) hits++
-                    else { last = n; hits = 1 }
-                    if (hits >= 6) return n
-                }
-            }
-            basic.pause(100)
-            t += 100
-        }
-        return 1
-    }
-
-    // =========================================================
-    // UTILS SERVO (dépôt cube)
-    // =========================================================
-
     //% blockId=msm_drop_servo270
     //% block="déposer cube servo270 port %port angle dépôt %dropAng angle repos %restAng temps dépôt %dropMs temps repos %restMs pause %holdMs"
     //% port.defl=6 dropAng.defl=-100 restAng.defl=-20 dropMs.defl=200 restMs.defl=500 holdMs.defl=2000
@@ -763,6 +634,4 @@ namespace msmdadabit {
         dadabit.setLego270Servo(port, restAng, restMs)
         basic.pause(300)
     }
-
-
 }
