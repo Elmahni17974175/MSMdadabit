@@ -7,9 +7,9 @@
  *  - aucun basic.forever()
  */
 
-//% color=#00BCD4 icon="\uf085" block="MSM AI Handler"
+//% color=#00BCD4 icon="\uf085" block="msmdadabit"
 //% groups='["Init","Capteurs","Suivi de ligne","Vision (WonderCam)","Bras","Mission"]'
-namespace msmAIHandler {
+namespace msmdadabit {
     // -----------------------------
     // Variables internes (capteurs)
     // -----------------------------
