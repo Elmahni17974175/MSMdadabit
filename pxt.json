@@ -1,0 +1,17 @@
+{
+  "name": "MSMdadabit",
+  "version": "0.1.0",
+  "description": "MSMdadabit (DaDa:bit + WonderCam via dadabit) : suivi de ligne fiable + détection couleur ID + approche + attraper/deposer + cycle pro.",
+  "license": "MIT",
+  "dependencies": {
+    "core": "*",
+    "radio": "*",
+    "music": "*",
+    "dadabit": "github:Hiwonder/dadabit"
+  },
+  "files": [
+    "main.ts"
+  ],
+  "testFiles": [],
+  "public": true
+}
