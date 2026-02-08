@@ -1,6 +1,6 @@
 /**
  * MSM AI Handler - Extension MakeCode (micro:bit)
- * DaDa:bit + WonderCam
+ * DaDa:bit + WonderCam 
  *
  * Extension "propre" :
  *  - uniquement des fonctions exportées (blocs)
