@@ -1,3 +1,4 @@
+
 //% color=#00BCD4 icon="\uf085" block="msmdadabit"
 //% groups='["Init","Réglages","Capteurs","Mouvements","Suivi de ligne","Vision (WonderCam)","Bras","Mission","Smart Transport"]'
 namespace msmdadabit {
@@ -420,9 +421,6 @@ namespace msmdadabit {
     // ✅ BLOCS "décomposition" : détectée ? / X / Y / stable ?
     // ---------------------------------------------------------
 
-    /**
-     * Couleur ID détectée actuellement ?
-     */
     //% blockId=msm_color_detected
     //% block="couleur ID %id détectée ?"
     //% id.min=1 id.max=7 id.defl=1
@@ -431,10 +429,6 @@ namespace msmdadabit {
         return wondercam.isDetectedColorId(id)
     }
 
-    /**
-     * X de la couleur ID (position horizontale).
-     * Retourne 0 si non détectée.
-     */
     //% blockId=msm_color_x
     //% block="X de couleur ID %id"
     //% id.min=1 id.max=7 id.defl=1
@@ -444,10 +438,6 @@ namespace msmdadabit {
         return wondercam.XOfColorId(wondercam.Options.Pos_X, id)
     }
 
-    /**
-     * Y de la couleur ID (position verticale).
-     * Retourne 0 si non détectée.
-     */
     //% blockId=msm_color_y
     //% block="Y de couleur ID %id"
     //% id.min=1 id.max=7 id.defl=1
@@ -457,9 +447,6 @@ namespace msmdadabit {
         return wondercam.XOfColorId(wondercam.Options.Pos_Y, id)
     }
 
-    /**
-     * Réinitialiser la stabilité (utile en pédagogie ou si on change d'ID).
-     */
     //% blockId=msm_color_stable_reset
     //% block="réinitialiser stabilité couleur"
     //% group="Vision (WonderCam)"
@@ -468,31 +455,21 @@ namespace msmdadabit {
         stableLastId = -1
     }
 
-    /**
-     * Couleur ID détectée de façon stable ?
-     * - Vérifie : détectée + X dans [X_MIN..X_MAX]
-     * - Compte VALIDATIONS fois consécutives
-     *
-     * ⚠️ Ne change PAS la mission : approachAndGrabIfColor() garde son propre compteur (nextCount).
-     */
     //% blockId=msm_color_stable
     //% block="couleur ID %id détectée de façon stable ?"
     //% id.min=1 id.max=7 id.defl=1
     //% group="Vision (WonderCam)"
     export function isColorDetectedStable(id: number): boolean {
-        // si ID change → reset compteur
         if (stableLastId != id) {
             stableLastId = id
             stableCount = 0
         }
 
-        // pas détectée → reset
         if (!wondercam.isDetectedColorId(id)) {
             stableCount = 0
             return false
         }
 
-        // X doit être dans la zone utile
         const x = wondercam.XOfColorId(wondercam.Options.Pos_X, id)
         if (x < X_MIN || x > X_MAX) {
             stableCount = 0
@@ -506,54 +483,62 @@ namespace msmdadabit {
     // =========================================================
     // ✅ MISSION (décomposition) : approche seule (action)
     // =========================================================
-    /**
-     * ACTION : s'approcher du cube couleur ID jusqu'à être proche.
-     * - Tant que la couleur est visible ET Y < Y_CLOSE, on suit la ligne.
-     * - S’arrête si la couleur disparaît (sécurité).
-     *
-     * À utiliser après un test "couleur détectée stable ?".
-     */
     //% blockId=msm_approach_color_only
     //% block="s'approcher du cube couleur ID %id"
     //% id.min=1 id.max=7 id.defl=1
     //% group="Mission"
     export function approachColor(id: number): void {
-        // boucle approche : visible + pas encore proche
         while (wondercam.isDetectedColorId(id) &&
             wondercam.XOfColorId(wondercam.Options.Pos_Y, id) < Y_CLOSE) {
             updateCamera()
             updateLineSensors()
             lineFollowGeneral()
         }
-        // On ne fait PAS grab() ici : bloc séparé "attraper l'objet"
         stopInterne()
     }
 
+    // =========================================================
+    // ✅ APRILTAG (MODIFIÉ) : bloc court "détecter AprilTag ID"
+    // =========================================================
     /**
-     * ✅ Nouveau nom générique AprilTag
-     * Retour : tagA, tagB, ou -1.
+     * ✅ Détecter n’importe quel AprilTag
+     * Retour : ID du tag détecté, sinon -1.
      */
-    //% blockId=msm_detect_apriltag_ab
-    //% block="détecter AprilTag A %tagA ou B %tagB (timeout %timeoutMs ms)"
-    //% tagA.defl=1 tagB.defl=2 timeoutMs.defl=6000
+    //% blockId=msm_detect_apriltag_id
+    //% block="détecter AprilTag ID (timeout %timeoutMs ms)"
+    //% timeoutMs.defl=6000
     //% group="Vision (WonderCam)"
-    export function detectAprilTagAB(tagA: number = 1, tagB: number = 2, timeoutMs: number = 6000): number {
+    export function detectAprilTagID(timeoutMs: number = 6000): number {
         camModeAprilTag()
         let t = 0
+
         while (t < timeoutMs) {
             updateCamera()
-            if (wondercam.isDetecteAprilTagId(tagA)) return tagA
-            if (wondercam.isDetecteAprilTagId(tagB)) return tagB
+
+            // On parcourt une plage large (0..50) pour couvrir 1,2,3,4,... etc.
+            for (let id = 0; id <= 50; id++) {
+                if (wondercam.isDetecteAprilTagId(id)) return id
+            }
+
             basic.pause(120)
             t += 120
         }
         return -1
     }
 
-    /**
-     * ✅ Nouveau nom générique Chiffres (1..9 typiquement)
-     * Retour : chiffre détecté, sinon 1 par défaut.
-     */
+    // -------------------------
+    // ALIAS CACHÉ (compat) : ancien nom -> nouveau bloc
+    // -------------------------
+    //% blockHidden=1
+    //% deprecated=1
+    export function readAprilTagAB(tagA: number = 1, tagB: number = 2, timeoutMs: number = 6000): number {
+        // compat : ignore tagA/tagB, renvoie le premier tag trouvé
+        return detectAprilTagID(timeoutMs)
+    }
+
+    // =========================================================
+    // CHIFFRES
+    // =========================================================
     //% blockId=msm_detect_number_stable
     //% block="détecter chiffre stable (timeout %timeoutMs ms)"
     //% timeoutMs.defl=2500
@@ -569,8 +554,6 @@ namespace msmdadabit {
 
             if (wondercam.MaxConfidenceOfNumber() >= 0.4) {
                 const n = wondercam.NumberWithMaxConfidence()
-
-                // général : accepte 1..9 (tu peux limiter à 1..5 si tu veux)
                 if (n >= 1 && n <= 9) {
                     if (n == last) hits++
                     else { last = n; hits = 1 }
@@ -582,15 +565,6 @@ namespace msmdadabit {
             t += 100
         }
         return 1
-    }
-
-    // -------------------------
-    // ALIAS CACHÉS (compat)
-    // -------------------------
-    //% blockHidden=1
-    //% deprecated=1
-    export function readAprilTagAB(tagA: number = 1, tagB: number = 2, timeoutMs: number = 6000): number {
-        return detectAprilTagAB(tagA, tagB, timeoutMs)
     }
 
     //% blockHidden=1
@@ -854,9 +828,6 @@ namespace msmdadabit {
         stop()
     }
 
-    /**
-     * Configure Smart Transport (tous paramètres importants)
-     */
     //% blockId=msm_st_config
     //% block="configurer Smart Transport tagA %tagA tagB %tagB virage90 %turn90ms ms recul %backMs ms BP0 %bp0ms ms loop %loopMs ms hold %holdMs ms cooldown %cooldownMs ms servo %servoPort drop %dropAng rest %restAng dropMs %dropMs restMs %restMs holdOpen %holdOpenMs"
     //% tagA.defl=1 tagB.defl=2
@@ -897,9 +868,6 @@ namespace msmdadabit {
         ST_HOLD_MS = holdOpenMs
     }
 
-    /**
-     * Réinitialiser Smart Transport
-     */
     //% blockId=msm_st_reset
     //% block="réinitialiser Smart Transport"
     //% group="Smart Transport"
@@ -917,10 +885,6 @@ namespace msmdadabit {
         basic.clearScreen()
     }
 
-    /**
-     * Étape Smart Transport (à appeler dans forever)
-     * T1 -> BP0 -> T2 -> BP1/BP2 -> Dépôt -> FIN
-     */
     //% blockId=msm_st_step
     //% block="étape Smart Transport"
     //% group="Smart Transport"
@@ -928,11 +892,13 @@ namespace msmdadabit {
         updateLineSensors()
         stRearmIfLeftBar()
 
-        // T1 : lire tag A/B sur barre
+        // T1 : lire tag A/B sur barre (compat : on garde la logique existante)
         if (st_barIndex == 0 && st_pathAB == -1) {
             stop()
             if (onBar3Plus()) {
-                const id = detectAprilTagAB(ST_TAG_A, ST_TAG_B, 6000)
+                // ⚠️ Ici Smart Transport attend A/B (ex: 1/2). On peut garder tel quel,
+                // mais si tu veux : on pourra aussi le migrer vers detectAprilTagID().
+                const id = readAprilTagAB(ST_TAG_A, ST_TAG_B, 6000)
                 if (id == ST_TAG_A || id == ST_TAG_B) {
                     st_pathAB = id
                     stDisp(id == ST_TAG_A ? "A" : "B")
@@ -946,17 +912,14 @@ namespace msmdadabit {
             return
         }
 
-        // fin
         if (st_barIndex == 99) {
             stop()
             basic.pause(ST_LOOP_MS)
             return
         }
 
-        // suivi ligne
         lineFollowGeneral()
 
-        // barre suivante
         if (!stBarHit()) {
             basic.pause(ST_LOOP_MS)
             return
@@ -965,7 +928,6 @@ namespace msmdadabit {
         stop()
         basic.pause(220)
 
-        // BP0
         if (st_barIndex == 1) {
             stTurnAtBP0()
             stLeaveBarShort()
@@ -974,7 +936,6 @@ namespace msmdadabit {
             return
         }
 
-        // T2 : lire chiffre (stable)
         if (st_barIndex == 2) {
             st_target = detectNumberStable(2500)
             stDisp(st_target + "")
@@ -984,7 +945,6 @@ namespace msmdadabit {
             return
         }
 
-        // BP1
         if (st_barIndex == 3) {
             if (st_target == 1) {
                 stTurnLeft90()
@@ -999,7 +959,6 @@ namespace msmdadabit {
             return
         }
 
-        // BP2
         if (st_barIndex == 4) {
             if (st_target == 2) {
                 stTurnLeft90()
@@ -1011,9 +970,6 @@ namespace msmdadabit {
         }
     }
 
-    /**
-     * Smart Transport terminé ?
-     */
     //% blockId=msm_st_done
     //% block="Smart Transport terminé ?"
     //% group="Smart Transport"
