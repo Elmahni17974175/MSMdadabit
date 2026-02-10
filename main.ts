@@ -298,7 +298,7 @@ namespace msmdadabit {
      * Demi-tour robuste avec recalage ligne (inspiré du code testé).
      */
     //% blockId=msm_move_u_turn
-    //% block="faire demi-tour (recalage ligne) vitesse %v"
+    //% block="faire demi-tour vitesse %v"
     //% v.defl=44
     //% group="Mouvements"
     export function uTurn(v: number = 44): void {
@@ -637,7 +637,7 @@ namespace msmdadabit {
     // MISSION (AI Handler)
     // =========================================================
     //% blockId=msm_get_phase
-    //% block="phase mission (0=reconnaissance,1=livraison)"
+    //% block="Cube detecte et stable"
     //% group="Mission"
     export function getPhase(): number {
         return phase
